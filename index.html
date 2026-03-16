@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>익명질문함</title>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Nanum+Gothic:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #fdf0e8; --panel: #fff8f2; --sidebar: #fff0e4;
+      --card: #ffffff; --border: #e8c4a8; --accent: #d4784a;
+      --accent2: #84b47a; --accent3: #a888c4; --text: #4a3428;
+      --muted: #a08070; --shadow: rgba(180,120,80,0.18);
+      --tag-bg: #fde0c8; --tag-color: #b45030; --tooltip-bg: #fffbe8;
+    }
+    [data-theme="dark"] {
+      --bg: #1c1828; --panel: #241e34; --sidebar: #1a1628;
+      --card: #2c2440; --border: #483860; --accent: #c4a0d8;
+      --accent2: #84b49a; --accent3: #d4b888; --text: #ece4f8;
+      --muted: #887898; --shadow: rgba(0,0,0,0.35);
+      --tag-bg: rgba(196,160,216,0.15); --tag-color: #c4a0d8; --tooltip-bg: #2c2440;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Nanum Gothic',sans-serif; font-weight:700; background:var(--bg); min-height:100vh; transition:background 0.3s; }
+
+    /* 로그인 */
+    .auth-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
+    .auth-box { background:var(--panel); border:3px solid var(--border); box-shadow:6px 6px 0 var(--shadow); width:100%; max-width:340px; }
+    .auth-header { background:var(--accent); padding:10px 16px; font-family:'DotGothic16',monospace; font-size:13px; color:white; letter-spacing:2px; text-align:center; }
+    .auth-body { padding:24px; }
+    .auth-tabs { display:flex; margin-bottom:20px; border:2px solid var(--border); }
+    .auth-tab { flex:1; padding:8px; background:none; border:none; font-family:'DotGothic16',monospace; font-size:11px; color:var(--muted); cursor:pointer; }
+    .auth-tab.active { background:var(--accent); color:white; }
+    .auth-field { margin-bottom:12px; }
+    .auth-label { display:block; font-family:'DotGothic16',monospace; font-size:10px; color:var(--muted); letter-spacing:1px; margin-bottom:5px; }
+    .auth-input { width:100%; background:var(--card); border:2px solid var(--border); padding:10px 12px; font-size:13px; font-weight:700; color:var(--text); font-family:'Nanum Gothic',sans-serif; outline:none; }
+    .auth-input:focus { border-color:var(--accent); }
+    .auth-input::placeholder { color:var(--muted); font-weight:400; }
+    .auth-submit { width:100%; background:var(--accent); border:none; padding:12px; color:white; font-family:'DotGothic16',monospace; font-size:13px; cursor:pointer; letter-spacing:1px; box-shadow:3px 3px 0 var(--shadow); margin-top:4px; }
+    .auth-submit:hover { transform:translate(-1px,-1px); box-shadow:4px 4px 0 var(--shadow); }
+    .auth-error { font-family:'DotGothic16',monospace; font-size:11px; color:#e05050; margin-top:10px; text-align:center; min-height:16px; }
+    .char-preview { text-align:center; margin-bottom:16px; }
+
+    /* 앱 */
+    .app { display:none; }
+    .app.active { display:block; }
+    .topbar { background:var(--panel); border-bottom:2px solid var(--border); padding:8px 24px; display:flex; align-items:center; justify-content:space-between; }
+    .site-title { font-family:'DotGothic16',monospace; font-size:16px; color:var(--accent); letter-spacing:2px; }
+    .topbar-right { display:flex; align-items:center; gap:10px; }
+    .theme-btn, .logout-btn { background:var(--card); border:2px solid var(--border); padding:5px 12px; font-family:'DotGothic16',monospace; font-size:10px; color:var(--muted); cursor:pointer; }
+    .theme-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .logout-btn:hover { border-color:#e05050; color:#e05050; }
+
+    .layout { max-width:1200px; margin:20px auto; padding:0 20px; display:grid; grid-template-columns:240px 1fr; gap:16px; align-items:start; }
+
+    /* 사이드바 */
+    .sidebar { background:var(--sidebar); border:3px solid var(--border); box-shadow:4px 4px 0 var(--shadow); }
+    .sidebar-header { background:var(--accent); padding:8px 14px; font-family:'DotGothic16',monospace; font-size:11px; color:white; letter-spacing:1px; }
+    .profile-section { padding:16px; text-align:center; border-bottom:2px dashed var(--border); }
+    .pixel-room { width:180px; height:130px; margin:0 auto 12px; border:2px solid var(--border); position:relative; overflow:hidden; image-rendering:pixelated; }
+    .room-bg { position:absolute; inset:0; width:100%; height:100%; }
+    .char-svg { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); image-rendering:pixelated; }
+    .profile-nick { font-family:'DotGothic16',monospace; font-size:14px; color:var(--accent); margin-bottom:6px; font-weight:800; }
+    .coin-row { display:flex; align-items:center; justify-content:center; gap:6px; font-family:'DotGothic16',monospace; font-size:12px; color:var(--muted); }
+    .coin-num { color:var(--accent2); font-size:15px; font-weight:800; }
+
+    .shop-btn-wrap { padding:12px 16px; border-bottom:2px dashed var(--border); position:relative; }
+    .shop-btn { width:100%; background:var(--card); border:2px solid var(--border); padding:10px; font-family:'DotGothic16',monospace; font-size:12px; color:var(--text); cursor:pointer; letter-spacing:1px; box-shadow:2px 2px 0 var(--shadow); }
+    .shop-btn:hover { border-color:var(--accent); color:var(--accent); transform:translate(-1px,-1px); }
+    .shop-tooltip { display:none; position:absolute; left:16px; top:calc(100% - 8px); background:var(--tooltip-bg); border:2px solid var(--border); box-shadow:3px 3px 0 var(--shadow); padding:8px 10px; font-family:'DotGothic16',monospace; font-size:10px; color:var(--text); white-space:nowrap; z-index:100; line-height:1.8; }
+    .shop-tooltip::before { content:''; position:absolute; top:-8px; left:16px; width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-bottom:8px solid var(--border); }
+    .shop-btn-wrap:hover .shop-tooltip { display:block; }
+
+    .gb-section { padding:12px 16px; }
+    .sec-label { font-family:'DotGothic16',monospace; font-size:10px; color:var(--muted); letter-spacing:1px; margin-bottom:8px; font-weight:800; }
+    .gb-row { display:flex; gap:4px; margin-bottom:8px; }
+    .gb-input { flex:1; background:var(--card); border:2px solid var(--border); padding:6px 8px; font-size:12px; font-weight:700; color:var(--text); font-family:'Nanum Gothic',sans-serif; outline:none; }
+    .gb-input:focus { border-color:var(--accent2); }
+    .gb-ok { background:var(--accent2); border:none; padding:6px 10px; font-family:'DotGothic16',monospace; font-size:11px; color:white; cursor:pointer; }
+    .gb-list { max-height:110px; overflow-y:auto; }
+    .gb-list::-webkit-scrollbar { width:3px; }
+    .gb-list::-webkit-scrollbar-thumb { background:var(--border); }
+    .gb-item { font-size:11px; font-weight:700; color:var(--muted); padding:4px 0; border-bottom:1px dotted var(--border); line-height:1.5; display:flex; justify-content:space-between; align-items:center; }
+    .gb-del { background:none; border:none; font-family:'DotGothic16',monospace; font-size:9px; color:var(--muted); cursor:pointer; padding:2px 4px; }
+    .gb-del:hover { color:#e05050; }
+
+    /* 메인 */
+    .main { background:var(--panel); border:3px solid var(--border); box-shadow:4px 4px 0 var(--shadow); }
+    .main-header { background:var(--accent); padding:8px 16px; display:flex; align-items:center; gap:8px; }
+    .win-dots { display:flex; gap:5px; }
+    .wd { width:10px; height:10px; }
+    .wd.r { background:#ff9090; } .wd.y { background:#ffd090; } .wd.g { background:#90d490; }
+    .win-title { font-family:'DotGothic16',monospace; font-size:12px; color:white; letter-spacing:1px; }
+    .tabs { display:flex; border-bottom:2px solid var(--border); }
+    .tab { padding:10px 18px; background:none; border:none; font-family:'DotGothic16',monospace; font-size:11px; color:var(--muted); cursor:pointer; letter-spacing:1px; border-right:1px solid var(--border); font-weight:800; }
+    .tab.active { background:var(--tag-bg); color:var(--accent); }
+    .tab:hover:not(.active) { background:var(--card); }
+    .tab.admin-tab { color:#e05050; }
+    .tab.admin-tab.active { background:rgba(224,80,80,0.1); color:#e05050; }
+    .main-content { padding:20px; min-height:500px; max-height:78vh; overflow-y:auto; }
+    .main-content::-webkit-scrollbar { width:4px; }
+    .main-content::-webkit-scrollbar-thumb { background:var(--border); }
+    .panel { display:none; }
+    .panel.active { display:block; }
+    .step { display:none; }
+    .step.active { display:block; }
+
+    .prog-dots { display:flex; gap:6px; margin-bottom:16px; }
+    .pdot { width:10px; height:10px; background:var(--border); }
+    .pdot.on { background:var(--accent); }
+    .step-lbl { font-family:'DotGothic16',monospace; font-size:10px; color:var(--muted); letter-spacing:2px; margin-bottom:8px; }
+    .step-title { font-size:15px; font-weight:800; color:var(--text); margin-bottom:16px; line-height:1.5; }
+    .btn-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+    .sel-btn { background:var(--card); border:2px solid var(--border); padding:14px 10px; font-size:13px; font-weight:700; color:var(--text); cursor:pointer; font-family:'Nanum Gothic',sans-serif; text-align:left; line-height:1.4; }
+    .sel-btn:hover { border-color:var(--accent); background:var(--tag-bg); }
+    .sel-btn.on { border-color:var(--accent); background:var(--tag-bg); color:var(--accent); font-weight:800; }
+    .tag-wrap { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+    .tag-btn { background:var(--card); border:2px solid var(--border); padding:7px 14px; font-size:12px; font-weight:800; color:var(--muted); cursor:pointer; font-family:'DotGothic16',monospace; }
+    .tag-btn:hover { border-color:var(--accent2); color:var(--accent2); }
+    .tag-btn.on { border-color:var(--accent2); background:rgba(132,180,122,0.15); color:var(--accent2); }
+    textarea { width:100%; background:var(--card); border:2px solid var(--border); padding:12px; font-size:13px; font-weight:700; color:var(--text); font-family:'Nanum Gothic',sans-serif; resize:none; height:90px; outline:none; margin-bottom:12px; }
+    textarea:focus { border-color:var(--accent); }
+    textarea::placeholder { color:var(--muted); font-weight:400; }
+    .btn-row { display:flex; gap:8px; }
+    .primary-btn { flex:1; background:var(--accent); border:none; padding:12px; color:white; font-family:'DotGothic16',monospace; font-size:12px; cursor:pointer; letter-spacing:1px; box-shadow:3px 3px 0 var(--shadow); }
+    .primary-btn:hover { transform:translate(-1px,-1px); box-shadow:4px 4px 0 var(--shadow); }
+    .primary-btn:disabled { background:var(--border); color:var(--muted); box-shadow:none; cursor:not-allowed; }
+    .ghost-btn { background:none; border:2px solid var(--border); padding:12px 16px; color:var(--muted); font-family:'DotGothic16',monospace; font-size:12px; cursor:pointer; }
+    .ghost-btn:hover { border-color:var(--text); color:var(--text); }
+    .done-box { text-align:center; padding:40px 0; }
+    .done-svg { display:block; margin:0 auto 12px; animation:bounce 1s infinite; }
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    .done-title { font-size:16px; font-weight:800; color:var(--text); margin-bottom:6px; }
+    .done-coin { font-family:'DotGothic16',monospace; font-size:12px; color:var(--accent2); margin-bottom:20px; }
+
+    /* 이미지 영역 */
+    .img-section { margin-bottom:12px; }
+    .img-section-label { font-family:'DotGothic16',monospace; font-size:10px; color:var(--muted); letter-spacing:1px; margin-bottom:6px; }
+    .paste-hint { border:2px dashed var(--border); padding:12px; font-family:'DotGothic16',monospace; font-size:11px; color:var(--muted); text-align:center; cursor:pointer; margin-bottom:6px; }
+    .paste-hint:hover { border-color:var(--accent); color:var(--accent); }
+    .img-preview-grid { display:flex; flex-wrap:wrap; gap:6px; }
+    .img-thumb-wrap { position:relative; display:inline-block; }
+    .img-thumb { width:80px; height:80px; object-fit:cover; border:2px solid var(--border); display:block; }
+    .img-thumb-del { position:absolute; top:-6px; right:-6px; background:#e05050; border:none; color:white; font-family:'DotGothic16',monospace; font-size:10px; cursor:pointer; width:18px; height:18px; display:flex; align-items:center; justify-content:center; }
+
+    /* 피드 */
+    .q-card { background:var(--card); border:2px solid var(--border); padding:16px; margin-bottom:12px; }
+    .q-card:hover { border-color:var(--accent); box-shadow:3px 3px 0 var(--shadow); }
+    .q-tags { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+    .badge { font-family:'DotGothic16',monospace; font-size:10px; padding:3px 8px; font-weight:800; }
+    .badge-level { background:var(--tag-bg); color:var(--tag-color); border:1px solid var(--border); }
+    .badge-tag { background:rgba(132,180,122,0.2); color:var(--accent2); border:1px solid var(--accent2); }
+    .q-imgs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+    .q-img { max-width:150px; max-height:150px; border:2px solid var(--border); cursor:pointer; }
+    .q-text { font-size:13px; font-weight:700; color:var(--text); line-height:1.7; margin-bottom:10px; }
+    .q-text.empty { color:var(--muted); font-style:italic; font-size:12px; font-weight:400; }
+    .q-bottom { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .react-btn { background:var(--card); border:1px solid var(--border); padding:4px 10px; font-size:11px; font-weight:800; color:var(--muted); cursor:pointer; font-family:'DotGothic16',monospace; }
+    .react-btn:hover, .react-btn.on { border-color:var(--accent); color:var(--accent); background:var(--tag-bg); }
+    .q-time { font-family:'DotGothic16',monospace; font-size:10px; color:var(--muted); margin-left:auto; }
+    .q-actions { display:flex; gap:4px; }
+    .edit-btn, .del-btn { background:none; border:1px solid var(--border); padding:3px 8px; font-family:'DotGothic16',monospace; font-size:10px; cursor:pointer; }
+    .edit-btn { color:var(--muted); }
+    .edit-btn:hover { border-color:var(--accent2); color:var(--accent2); }
+    .del-btn { color:var(--muted); }
+    .del-btn:hover { border-color:#e05050; color:#e05050; }
+    .edit-area { display:none; margin-top:8px; }
+    .edit-area.show { display:block; }
+    .edit-input { width:100%; background:var(--bg); border:2px solid var(--border); padding:10px; font-size:13px; font-weight:700; color:var(--text); font-family:'Nanum Gothic',sans-serif; outline:none; resize:none; height:70px; margin-bottom:6px; }
+    .answers { margin-top:10px; border-top:1px dashed var(--border); padding-top:10px; }
+    .answer-item { font-size:12px; font-weight:700; color:var(--muted); padding:4px 0; line-height:1.5; display:flex; gap:4px; }
+    .answer-dot { flex-shrink:0; margin-top:4px; }
+    .answer-row { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+    .answer-input { flex:1; background:var(--bg); border:2px solid var(--border); padding:7px 10px; font-size:12px; font-weight:700; color:var(--text); font-family:'Nanum Gothic',sans-serif; outline:none; min-width:120px; }
+    .answer-input:focus { border-color:var(--accent2); }
+    .answer-input::placeholder { color:var(--muted); font-weight:400; }
+    .answer-submit { background:var(--accent2); border:none; padding:7px 14px; font-size:11px; font-weight:800; color:white; font-family:'DotGothic16',monospace; cursor:pointer; }
+    .feed-empty { text-align:center; padding:60px 0; font-family:'DotGothic16',monospace; font-size:12px; color:var(--muted); line-height:3; }
+
+    /* 이미지 라이트박스 */
+    .lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:999; align-items:center; justify-content:center; cursor:pointer; }
+    .lightbox.show { display:flex; }
+    .lightbox img { max-width:90vw; max-height:90vh; }
+
+    /* 상점 */
+    .shop-section-title { font-family:'DotGothic16',monospace; font-size:11px; color:var(--muted); letter-spacing:2px; margin-bottom:12px; padding-bottom:6px; border-bottom:2px solid var(--border); }
+    .shop-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+    .shop-item { background:var(--card); border:2px solid var(--border); padding:12px 8px; text-align:center; cursor:pointer; }
+    .shop-item:hover { border-color:var(--accent); transform:translate(-1px,-1px); box-shadow:2px 2px 0 var(--shadow); }
+    .shop-item.owned { border-color:var(--accent2); }
+    .shop-item.equipped { border-color:var(--accent); background:var(--tag-bg); }
+    .shop-item-name { font-family:'DotGothic16',monospace; font-size:10px; color:var(--text); margin-top:8px; margin-bottom:4px; font-weight:800; }
+    .shop-item-cost { font-family:'DotGothic16',monospace; font-size:10px; color:var(--muted); }
+    .shop-item.owned .shop-item-cost { color:var(--accent2); }
+    .shop-item.equipped .shop-item-cost { color:var(--accent); font-weight:800; }
+
+    /* 관리자 */
+    .admin-section { margin-bottom:20px; }
+    .admin-title { font-family:'DotGothic16',monospace; font-size:11px; color:#e05050; letter-spacing:1px; margin-bottom:12px; padding-bottom:6px; border-bottom:2px solid rgba(224,80,80,0.3); }
+    .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
+    .stat-card { background:var(--card); border:2px solid var(--border); padding:12px; text-align:center; }
+    .stat-num { font-family:'DotGothic16',monospace; font-size:22px; color:var(--accent); font-weight:800; }
+    .stat-lbl { font-family:'DotGothic16',monospace; font-size:10px; color:var(--muted); margin-top:4px; }
+    .user-row { background:var(--card); border:1px solid var(--border); padding:10px 14px; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:700; gap:8px; }
+    .user-nick { color:var(--text); font-family:'DotGothic16',monospace; }
+    .user-id { color:var(--muted); font-family:'DotGothic16',monospace; font-size:10px; }
+    .user-coin { color:var(--accent2); font-family:'DotGothic16',monospace; font-size:11px; }
+    .admin-del-btn { background:none; border:1px solid rgba(224,80,80,0.3); padding:3px 8px; font-family:'DotGothic16',monospace; font-size:10px; color:#e05050; cursor:pointer; }
+
+    @media (max-width:720px) { .layout { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+
+<!-- 로그인 -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-box">
+    <div class="auth-header">[ 익명질문함 로그인 ]</div>
+    <div class="auth-body">
+      <div class="char-preview">
+        <svg width="50" height="70" viewBox="0 0 10 14" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+          <rect x="1" y="1" width="2" height="2" fill="#f0c080"/>
+          <rect x="7" y="1" width="2" height="2" fill="#f0c080"/>
+          <rect x="2" y="2" width="6" height="5" fill="#f0c080"/>
+          <rect x="3" y="4" width="1" height="1" fill="#5a3a2a"/>
+          <rect x="6" y="4" width="1" height="1" fill="#5a3a2a"/>
+          <rect x="2" y="5" width="1" height="1" fill="#ffaaaa" opacity="0.7"/>
+          <rect x="7" y="5" width="1" height="1" fill="#ffaaaa" opacity="0.7"/>
+          <rect x="4" y="6" width="2" height="1" fill="#c07060"/>
+          <rect x="3" y="7" width="4" height="4" fill="#a0c4e8"/>
+          <rect x="1" y="7" width="2" height="3" fill="#a0c4e8"/>
+          <rect x="7" y="7" width="2" height="3" fill="#a0c4e8"/>
+          <rect x="3" y="11" width="2" height="2" fill="#7090c0"/>
+          <rect x="5" y="11" width="2" height="2" fill="#7090c0"/>
+        </svg>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('login')">로그인</button>
+        <button class="auth-tab" onclick="switchAuthTab('signup')">회원가입</button>
+      </div>
+      <div id="loginForm">
+        <div class="auth-field">
+          <label class="auth-label">아이디</label>
+          <input class="auth-input" id="loginId" placeholder="아이디 입력" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <button class="auth-submit" onclick="doLogin()">로그인</button>
+      </div>
+      <div id="signupForm" style="display:none">
+        <div class="auth-field">
+          <label class="auth-label">아이디 (영문/숫자/_)</label>
+          <input class="auth-input" id="signupId" placeholder="사용할 아이디">
+        </div>
+        <div class="auth-field">
+          <label class="auth-label">닉네임</label>
+          <input class="auth-input" id="signupNick" placeholder="표시될 닉네임" onkeydown="if(event.key==='Enter')doSignup()">
+        </div>
+        <button class="auth-submit" onclick="doSignup()">회원가입</button>
+      </div>
+      <div class="auth-error" id="authError"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 앱 -->
+<div class="app" id="appScreen">
+  <div class="topbar">
+    <div class="site-title">[ 익명질문함 ]</div>
+    <div class="topbar-right">
+      <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">다크모드</button>
+      <button class="logout-btn" onclick="doLogout()">로그아웃</button>
+    </div>
+  </div>
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-header">[ MY ROOM ]</div>
+      <div class="profile-section">
+        <div class="pixel-room">
+          <svg class="room-bg" id="roomBgSvg" viewBox="0 0 180 130" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated"></svg>
+          <svg class="char-svg" id="mainChar" width="50" height="70" viewBox="0 0 10 14" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated"></svg>
+        </div>
+        <div class="profile-nick" id="profileNick">닉네임</div>
+        <div class="coin-row">
+          <svg width="14" height="14" viewBox="0 0 7 7" style="image-rendering:pixelated">
+            <rect x="2" y="0" width="3" height="1" fill="#f0c840"/>
+            <rect x="1" y="1" width="5" height="1" fill="#f0c840"/>
+            <rect x="0" y="2" width="7" height="3" fill="#f0c840"/>
+            <rect x="1" y="5" width="5" height="1" fill="#d0a820"/>
+            <rect x="2" y="6" width="3" height="1" fill="#d0a820"/>
+          </svg>
+          <span class="coin-num" id="coinCount">0</span> COIN
+        </div>
+      </div>
+      <div class="shop-btn-wrap">
+        <button class="shop-btn" onclick="switchTab('shop')">[ SHOP ]</button>
+        <div class="shop-tooltip">모은 포인트로 아이템을<br>구매할 수 있어요!<br>질문 +10 / 답변 +15 / 공감 +2</div>
+      </div>
+      <div class="gb-section">
+        <div class="sec-label">[ 방명록 ]</div>
+        <div class="gb-row">
+          <input class="gb-input" id="gbInput" placeholder="한 마디..." onkeydown="if(event.key==='Enter')addGuestbook()">
+          <button class="gb-ok" onclick="addGuestbook()">OK</button>
+        </div>
+        <div class="gb-list" id="gbList"></div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="main-header">
+        <div class="win-dots"><div class="wd r"></div><div class="wd y"></div><div class="wd g"></div></div>
+        <span class="win-title">[ 익명질문함 v1.0 ]</span>
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('ask')">[ 질문하기 ]</button>
+        <button class="tab" onclick="switchTab('feed')">[ 질문 피드 ]</button>
+        <button class="tab" onclick="switchTab('shop')">[ 상점 ]</button>
+        <button class="tab admin-tab" id="adminTab" style="display:none" onclick="switchTab('admin')">[ 관리자 ]</button>
+      </div>
+      <div class="main-content">
+
+        <!-- 질문 -->
+        <div class="panel active" id="panel-ask">
+          <div class="step active" id="step1">
+            <div class="prog-dots"><div class="pdot on"></div><div class="pdot"></div><div class="pdot"></div></div>
+            <div class="step-lbl">STEP 01 / 03</div>
+            <div class="step-title">지금 어떤 상태예요?</div>
+            <div class="btn-grid">
+              <button class="sel-btn" onclick="selectLevel(this,'전혀 모르겠어요')">전혀 모르겠어요</button>
+              <button class="sel-btn" onclick="selectLevel(this,'조금 헷갈려요')">조금 헷갈려요</button>
+              <button class="sel-btn" onclick="selectLevel(this,'질문을 어떻게 해야 할지 모르겠어요')">질문을 어떻게 해야 할지 모르겠어요</button>
+              <button class="sel-btn" onclick="selectLevel(this,'검색해봤는데 해결이 안 돼요')">검색해봤는데 해결이 안 돼요</button>
+            </div>
+            <button class="primary-btn" id="next1" disabled onclick="goStep(2)">다음으로</button>
+          </div>
+          <div class="step" id="step2">
+            <div class="prog-dots"><div class="pdot on"></div><div class="pdot on"></div><div class="pdot"></div></div>
+            <div class="step-lbl">STEP 02 / 03</div>
+            <div class="step-title">어떤 분야예요? (복수 선택 가능)</div>
+            <div class="tag-wrap">
+              <button class="tag-btn" onclick="toggleTag(this,'HTML/CSS')">#HTML/CSS</button>
+              <button class="tag-btn" onclick="toggleTag(this,'JavaScript')">#JavaScript</button>
+              <button class="tag-btn" onclick="toggleTag(this,'과제 방향')">#과제방향</button>
+              <button class="tag-btn" onclick="toggleTag(this,'개념 이해')">#개념이해</button>
+              <button class="tag-btn" onclick="toggleTag(this,'에러/오류')">#에러/오류</button>
+              <button class="tag-btn" onclick="toggleTag(this,'기타')">#기타</button>
+            </div>
+            <div class="btn-row">
+              <button class="ghost-btn" onclick="goStep(1)">이전</button>
+              <button class="primary-btn" id="next2" disabled onclick="goStep(3)">다음으로</button>
+            </div>
+          </div>
+          <div class="step" id="step3">
+            <div class="prog-dots"><div class="pdot on"></div><div class="pdot on"></div><div class="pdot on"></div></div>
+            <div class="step-lbl">STEP 03 / 03</div>
+            <div class="step-title">더 자세히 적어줄 수 있어요? <span style="font-size:12px;font-weight:400;color:var(--muted)">(선택사항)</span></div>
+            <textarea id="questionInput" placeholder="어떤 부분이 막히는지 조금만 더 알려주면 더 좋은 답변이 달릴 거예요. 안 써도 괜찮아요!"></textarea>
+            <div class="img-section">
+              <div class="img-section-label">이미지 첨부 (여러 장 가능 / Ctrl+V 붙여넣기 지원)</div>
+              <div class="paste-hint" onclick="document.getElementById('qFileInput').click()">클릭해서 파일 선택 또는 Ctrl+V 로 붙여넣기</div>
+              <input type="file" id="qFileInput" accept="image/*" multiple style="display:none" onchange="handleQFiles(this)">
+              <div class="img-preview-grid" id="qImgPreview"></div>
+            </div>
+            <div class="btn-row">
+              <button class="ghost-btn" onclick="goStep(2)">이전</button>
+              <button class="primary-btn" onclick="submitQuestion()">익명으로 질문하기</button>
+            </div>
+          </div>
+          <div class="step" id="stepDone">
+            <div class="done-box">
+              <svg class="done-svg" width="50" height="70" viewBox="0 0 10 14" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+                <rect x="1" y="1" width="2" height="2" fill="#f0c080"/>
+                <rect x="7" y="1" width="2" height="2" fill="#f0c080"/>
+                <rect x="2" y="2" width="6" height="5" fill="#f0c080"/>
+                <rect x="3" y="4" width="1" height="1" fill="#5a3a2a"/>
+                <rect x="6" y="4" width="1" height="1" fill="#5a3a2a"/>
+                <rect x="3" y="6" width="4" height="1" fill="#c07060"/>
+                <rect x="3" y="7" width="4" height="4" fill="#a0d4a0"/>
+                <rect x="1" y="7" width="2" height="3" fill="#a0d4a0"/>
+                <rect x="7" y="7" width="2" height="3" fill="#a0d4a0"/>
+                <rect x="3" y="11" width="2" height="2" fill="#70b070"/>
+                <rect x="5" y="11" width="2" height="2" fill="#70b070"/>
+              </svg>
+              <div class="done-title">질문이 올라갔어요!</div>
+              <div class="done-coin">+10 COIN 획득!</div>
+              <div class="btn-row" style="justify-content:center">
+                <button class="primary-btn" style="max-width:140px" onclick="resetForm()">또 질문하기</button>
+                <button class="ghost-btn" onclick="switchTab('feed')">피드 보기</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 피드 -->
+        <div class="panel" id="panel-feed">
+          <div id="feed"></div>
+        </div>
+
+        <!-- 상점 -->
+        <div class="panel" id="panel-shop">
+          <div class="admin-section">
+            <div class="shop-section-title">[ 캐릭터 ]</div>
+            <div class="shop-grid" id="charShop"></div>
+          </div>
+          <div class="admin-section">
+            <div class="shop-section-title">[ 배경 ]</div>
+            <div class="shop-grid" id="bgShop"></div>
+          </div>
+          <div class="admin-section">
+            <div class="shop-section-title">[ 옷 색상 ]</div>
+            <div class="shop-grid" id="clothShop"></div>
+          </div>
+        </div>
+
+        <!-- 관리자 -->
+        <div class="panel" id="panel-admin">
+          <div class="admin-section">
+            <div class="admin-title">[ 통계 ]</div>
+            <div class="stats-grid">
+              <div class="stat-card"><div class="stat-num" id="statUsers">0</div><div class="stat-lbl">가입자</div></div>
+              <div class="stat-card"><div class="stat-num" id="statQuestions">0</div><div class="stat-lbl">질문수</div></div>
+              <div class="stat-card"><div class="stat-num" id="statAnswers">0</div><div class="stat-lbl">답변수</div></div>
+            </div>
+          </div>
+          <div class="admin-section">
+            <div class="admin-title">[ 가입자 목록 ]</div>
+            <div id="userList"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 라이트박스 -->
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('show')">
+  <img id="lightboxImg" src="">
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, onSnapshot, orderBy, query, updateDoc, deleteDoc, doc, arrayUnion, setDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAPT1mg75wLb4rJVZBrugRb4VDewvHghwg",
+    authDomain: "letsqanda.firebaseapp.com",
+    projectId: "letsqanda",
+    storageBucket: "letsqanda.firebasestorage.app",
+    messagingSenderId: "703670875751",
+    appId: "1:703670875751:web:09649d9e09de604c5006c2"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const ADMIN_ID = 'admin';
+  let currentUser = null;
+  let qImgs = []; // 여러 장 이미지 배열
+
+  // ── 캐릭터/배경/옷 데이터 ──
+  const CHARS = [
+    { id:'cat',    name:'고양이', cost:0  },
+    { id:'dog',    name:'강아지', cost:30 },
+    { id:'rabbit', name:'토끼',   cost:30 },
+    { id:'bear',   name:'곰',     cost:50 },
+  ];
+  const BGS = [
+    { id:'sky',    name:'하늘',   cost:0  },
+    { id:'night',  name:'밤하늘', cost:20 },
+    { id:'sea',    name:'바다',   cost:20 },
+    { id:'sunset', name:'노을',   cost:30 },
+  ];
+  const CLOTHS = [
+    { id:'blue',   name:'파란색', cost:0,  color:'#a0c4e8' },
+    { id:'pink',   name:'분홍색', cost:10, color:'#f0a0b8' },
+    { id:'green',  name:'초록색', cost:10, color:'#90d090' },
+    { id:'yellow', name:'노란색', cost:10, color:'#f0d070' },
+    { id:'purple', name:'보라색', cost:20, color:'#c090e0' },
+    { id:'black',  name:'검정색', cost:30, color:'#505060' },
+  ];
+  const REACTIONS = [
+    { key:'curious', label:'나도궁금'   },
+    { key:'helpful', label:'도움됐어요' },
+    { key:'cool',    label:'멋져요'     },
+    { key:'same',    label:'저도요!'    },
+  ];
+
+  // ── 캐릭터 SVG ──
+  function buildCharSVG(charId, clothColor) {
+    const c = clothColor || '#a0c4e8';
+    if (charId==='dog') return `
+      <rect x="0" y="2" width="2" height="3" fill="#d4a870"/>
+      <rect x="8" y="2" width="2" height="3" fill="#d4a870"/>
+      <rect x="2" y="1" width="6" height="6" fill="#d4a870"/>
+      <rect x="3" y="3" width="1" height="1" fill="#4a2a1a"/>
+      <rect x="6" y="3" width="1" height="1" fill="#4a2a1a"/>
+      <rect x="3" y="5" width="4" height="2" fill="#c09060"/>
+      <rect x="3" y="7" width="4" height="4" fill="${c}"/>
+      <rect x="1" y="7" width="2" height="3" fill="${c}"/>
+      <rect x="7" y="7" width="2" height="3" fill="${c}"/>
+      <rect x="3" y="11" width="2" height="2" fill="#7090c0"/>
+      <rect x="5" y="11" width="2" height="2" fill="#7090c0"/>`;
+    if (charId==='rabbit') return `
+      <rect x="2" y="0" width="1" height="3" fill="#f0e0e8"/>
+      <rect x="7" y="0" width="1" height="3" fill="#f0e0e8"/>
+      <rect x="2" y="2" width="6" height="5" fill="#f0e0e8"/>
+      <rect x="3" y="4" width="1" height="1" fill="#e07090"/>
+      <rect x="6" y="4" width="1" height="1" fill="#e07090"/>
+      <rect x="4" y="6" width="2" height="1" fill="#e08090"/>
+      <rect x="3" y="7" width="4" height="4" fill="${c}"/>
+      <rect x="1" y="7" width="2" height="3" fill="${c}"/>
+      <rect x="7" y="7" width="2" height="3" fill="${c}"/>
+      <rect x="2" y="11" width="3" height="2" fill="#7090c0"/>
+      <rect x="5" y="11" width="3" height="2" fill="#7090c0"/>`;
+    if (charId==='bear') return `
+      <rect x="1" y="1" width="2" height="2" fill="#c09060"/>
+      <rect x="7" y="1" width="2" height="2" fill="#c09060"/>
+      <rect x="2" y="2" width="6" height="5" fill="#c09060"/>
+      <rect x="3" y="3" width="1" height="1" fill="#4a2a1a"/>
+      <rect x="6" y="3" width="1" height="1" fill="#4a2a1a"/>
+      <rect x="3" y="5" width="4" height="2" fill="#d0a878"/>
+      <rect x="3" y="7" width="4" height="4" fill="${c}"/>
+      <rect x="1" y="7" width="2" height="3" fill="${c}"/>
+      <rect x="7" y="7" width="2" height="3" fill="${c}"/>
+      <rect x="3" y="11" width="2" height="2" fill="#7090c0"/>
+      <rect x="5" y="11" width="2" height="2" fill="#7090c0"/>`;
+    return `
+      <rect x="1" y="1" width="2" height="2" fill="#f0c080"/>
+      <rect x="7" y="1" width="2" height="2" fill="#f0c080"/>
+      <rect x="2" y="2" width="6" height="5" fill="#f0c080"/>
+      <rect x="3" y="4" width="1" height="1" fill="#5a3a2a"/>
+      <rect x="6" y="4" width="1" height="1" fill="#5a3a2a"/>
+      <rect x="2" y="5" width="1" height="1" fill="#ffaaaa" opacity="0.7"/>
+      <rect x="7" y="5" width="1" height="1" fill="#ffaaaa" opacity="0.7"/>
+      <rect x="4" y="6" width="2" height="1" fill="#c07060"/>
+      <rect x="3" y="7" width="4" height="4" fill="${c}"/>
+      <rect x="1" y="7" width="2" height="3" fill="${c}"/>
+      <rect x="7" y="7" width="2" height="3" fill="${c}"/>
+      <rect x="3" y="11" width="2" height="2" fill="#7090c0"/>
+      <rect x="5" y="11" width="2" height="2" fill="#7090c0"/>`;
+  }
+
+  function drawBg(svgEl, bgId) {
+    const bgs = {
+      sky:`<rect x="0" y="0" width="180" height="80" fill="#c8e0f0"/>
+           <rect x="0" y="80" width="180" height="50" fill="#b8d090"/>
+           <rect x="20" y="15" width="30" height="10" fill="white" opacity="0.8"/>
+           <rect x="15" y="18" width="40" height="8" fill="white" opacity="0.8"/>
+           <rect x="0" y="78" width="180" height="4" fill="#90b060"/>`,
+      night:`<rect x="0" y="0" width="180" height="80" fill="#1a1a3e"/>
+             <rect x="0" y="80" width="180" height="50" fill="#2a2a1e"/>
+             <rect x="20" y="10" width="2" height="2" fill="white"/>
+             <rect x="50" y="20" width="2" height="2" fill="white" opacity="0.8"/>
+             <rect x="80" y="8" width="2" height="2" fill="white"/>
+             <rect x="120" y="15" width="2" height="2" fill="white"/>
+             <rect x="160" y="10" width="4" height="4" fill="#f0e060" opacity="0.9"/>
+             <rect x="0" y="78" width="180" height="4" fill="#1a1a10"/>`,
+      sea:`<rect x="0" y="0" width="180" height="50" fill="#80b8e0"/>
+           <rect x="0" y="50" width="180" height="40" fill="#4090c0"/>
+           <rect x="0" y="90" width="180" height="40" fill="#b8d090"/>
+           <rect x="10" y="55" width="40" height="4" fill="#60a8d8" opacity="0.6"/>
+           <rect x="0" y="88" width="180" height="4" fill="#90b060"/>`,
+      sunset:`<rect x="0" y="0" width="180" height="30" fill="#f0a060"/>
+              <rect x="0" y="30" width="180" height="30" fill="#e86040"/>
+              <rect x="0" y="60" width="180" height="20" fill="#c04030"/>
+              <rect x="0" y="80" width="180" height="50" fill="#2a1a10"/>
+              <rect x="70" y="10" width="10" height="10" fill="#f0d040" opacity="0.9"/>
+              <rect x="0" y="78" width="180" height="4" fill="#1a0a00"/>`,
+    };
+    svgEl.innerHTML = bgs[bgId] || bgs.sky;
+  }
+
+  function applyEquipped() {
+    const eq = currentUser.equipped || {};
+    const clothData = CLOTHS.find(c=>c.id===(eq.cloth||'blue'));
+    document.getElementById('mainChar').innerHTML = buildCharSVG(eq.char||'cat', clothData?.color);
+    drawBg(document.getElementById('roomBgSvg'), eq.bg||'sky');
+  }
+
+  // ── 인증 ──
+  window.switchAuthTab = function(tab) {
+    document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='signup')));
+    document.getElementById('loginForm').style.display = tab==='login'?'block':'none';
+    document.getElementById('signupForm').style.display = tab==='signup'?'block':'none';
+    document.getElementById('authError').textContent='';
+  }
+
+  window.doSignup = async function() {
+    const id   = document.getElementById('signupId').value.trim();
+    const nick = document.getElementById('signupNick').value.trim();
+    if (!id||!nick) { setAuthErr('모두 입력해주세요'); return; }
+    if (!/^[a-zA-Z0-9_]+$/.test(id)) { setAuthErr('아이디는 영문/숫자/_만 가능해요'); return; }
+    const snap = await getDoc(doc(db,'users',id));
+    if (snap.exists()) { setAuthErr('이미 사용 중인 아이디예요'); return; }
+    await setDoc(doc(db,'users',id), {
+      id, nick, coins:0,
+      owned:['cat','sky','blue'],
+      equipped:{char:'cat',bg:'sky',cloth:'blue'},
+      guestbook:[],
+      createdAt: new Date()
+    });
+    setAuthErr('가입 완료! 로그인해주세요', true);
+    switchAuthTab('login');
+  }
+
+  window.doLogin = async function() {
+    const id = document.getElementById('loginId').value.trim();
+    if (!id) { setAuthErr('아이디를 입력해주세요'); return; }
+    const snap = await getDoc(doc(db,'users',id));
+    if (!snap.exists()) { setAuthErr('존재하지 않는 아이디예요'); return; }
+    currentUser = { id, ...snap.data() };
+    enterApp();
+  }
+
+  window.doLogout = function() {
+    currentUser = null;
+    document.getElementById('authScreen').style.display='flex';
+    document.getElementById('appScreen').classList.remove('active');
+    document.getElementById('loginId').value='';
+    document.getElementById('authError').textContent='';
+    document.getElementById('authError').style.color='#e05050';
+  }
+
+  function setAuthErr(msg, ok=false) {
+    const el = document.getElementById('authError');
+    el.style.color = ok?'var(--accent2)':'#e05050';
+    el.textContent = msg;
+  }
+
+  function enterApp() {
+    document.getElementById('authScreen').style.display='none';
+    document.getElementById('appScreen').classList.add('active');
+    document.getElementById('profileNick').textContent = currentUser.nick;
+    document.getElementById('coinCount').textContent = currentUser.coins;
+    if (currentUser.id===ADMIN_ID) document.getElementById('adminTab').style.display='inline-block';
+    applyEquipped();
+    renderShop();
+    loadGuestbook();
+    setupPaste();
+  }
+
+  // ── 방명록 ──
+  async function loadGuestbook() {
+    const snap = await getDoc(doc(db,'users',currentUser.id));
+    renderGuestbook(snap.data()?.guestbook||[]);
+  }
+
+  function renderGuestbook(gb) {
+    document.getElementById('gbList').innerHTML = gb.length
+      ? gb.map((item,i)=>`<div class="gb-item"><span>${item.text}</span><button class="gb-del" onclick="delGuestbook(${i})">X</button></div>`).join('')
+      : '<div class="gb-item" style="color:var(--muted)">아직 방명록이 없어요</div>';
+  }
+
+  window.addGuestbook = async function() {
+    const input = document.getElementById('gbInput');
+    const text = input.value.trim();
+    if (!text) return;
+    const snap = await getDoc(doc(db,'users',currentUser.id));
+    const gb = snap.data()?.guestbook||[];
+    gb.unshift({ text, by:currentUser.nick });
+    await updateDoc(doc(db,'users',currentUser.id),{ guestbook:gb });
+    input.value='';
+    renderGuestbook(gb);
+  }
+
+  window.delGuestbook = async function(idx) {
+    const snap = await getDoc(doc(db,'users',currentUser.id));
+    const gb = snap.data()?.guestbook||[];
+    gb.splice(idx,1);
+    await updateDoc(doc(db,'users',currentUser.id),{ guestbook:gb });
+    renderGuestbook(gb);
+  }
+
+  // ── 이미지 처리 (여러 장) ──
+  function setupPaste() {
+    document.addEventListener('paste', e => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          readImgFile(item.getAsFile());
+        }
+      }
+    });
+  }
+
+  function readImgFile(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      qImgs.push(e.target.result);
+      renderQImgPreview();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function renderQImgPreview() {
+    document.getElementById('qImgPreview').innerHTML = qImgs.map((src,i)=>`
+      <div class="img-thumb-wrap">
+        <img class="img-thumb" src="${src}">
+        <button class="img-thumb-del" onclick="removeQImg(${i})">X</button>
+      </div>`).join('');
+  }
+
+  window.removeQImg = function(idx) {
+    qImgs.splice(idx,1);
+    renderQImgPreview();
+  }
+
+  window.handleQFiles = function(input) {
+    Array.from(input.files).forEach(readImgFile);
+    input.value='';
+  }
+
+  // ── 탭 ──
+  window.switchTab = function(tab) {
+    document.querySelectorAll('.tab').forEach(t=>{
+      const label=t.textContent;
+      t.classList.toggle('active',
+        (tab==='ask'&&label.includes('질문하기'))||
+        (tab==='feed'&&label.includes('피드'))||
+        (tab==='shop'&&label.includes('상점'))||
+        (tab==='admin'&&label.includes('관리자')));
+    });
+    ['ask','feed','shop','admin'].forEach(p=>{
+      const el=document.getElementById('panel-'+p);
+      if(el) el.classList.toggle('active',p===tab);
+    });
+    if(tab==='admin') loadAdmin();
+  }
+
+  // ── 질문 ──
+  window.selectLevel = function(btn, level) {
+    document.querySelectorAll('#step1 .sel-btn').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    window._level=level;
+    document.getElementById('next1').disabled=false;
+  }
+  window.toggleTag = function(btn, tag) {
+    btn.classList.toggle('on');
+    window._tags=window._tags||[];
+    window._tags=btn.classList.contains('on')?[...window._tags,tag]:window._tags.filter(t=>t!==tag);
+    document.getElementById('next2').disabled=(window._tags||[]).length===0;
+  }
+  window.goStep = function(n) {
+    document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
+    document.getElementById(n==='done'?'stepDone':'step'+n).classList.add('active');
+  }
+  window.submitQuestion = async function() {
+    const text = document.getElementById('questionInput').value.trim();
+    await addDoc(collection(db,'questions'), {
+      level: window._level||'',
+      tags:  window._tags||[],
+      text:  text||'',
+      imgs:  [...qImgs],
+      reactions: {},
+      answers: [],
+      authorId: currentUser.id,
+      authorNick: currentUser.nick,
+      createdAt: new Date()
+    });
+    currentUser.coins+=10;
+    await updateDoc(doc(db,'users',currentUser.id),{coins:currentUser.coins});
+    document.getElementById('coinCount').textContent=currentUser.coins;
+    qImgs=[];
+    renderQImgPreview();
+    goStep('done');
+  }
+  window.resetForm = function() {
+    window._level=''; window._tags=[];
+    document.querySelectorAll('.sel-btn,.tag-btn').forEach(b=>b.classList.remove('on'));
+    document.getElementById('questionInput').value='';
+    qImgs=[];
+    renderQImgPreview();
+    document.getElementById('next1').disabled=true;
+    document.getElementById('next2').disabled=true;
+    goStep(1);
+  }
+
+  // ── 반응 ──
+  window.toggleReaction = async function(id, key, reactStr) {
+    const reactions = JSON.parse(decodeURIComponent(reactStr));
+    const arr = reactions[key]||[];
+    const liked = arr.includes(currentUser.id);
+    const updated = liked?arr.filter(u=>u!==currentUser.id):[...arr,currentUser.id];
+    await updateDoc(doc(db,'questions',id),{[`reactions.${key}`]:updated});
+    if (!liked) {
+      currentUser.coins+=2;
+      await updateDoc(doc(db,'users',currentUser.id),{coins:currentUser.coins});
+      document.getElementById('coinCount').textContent=currentUser.coins;
+    }
+  }
+
+  // ── 답변 ──
+  window.submitAnswer = async function(id) {
+    const input = document.getElementById('ans-'+id);
+    const text = input.value.trim();
+    if (!text) return;
+    await updateDoc(doc(db,'questions',id),{answers:arrayUnion(`${currentUser.nick}: ${text}`)});
+    input.value='';
+    currentUser.coins+=15;
+    await updateDoc(doc(db,'users',currentUser.id),{coins:currentUser.coins});
+    document.getElementById('coinCount').textContent=currentUser.coins;
+  }
+
+  // ── 수정/삭제 ──
+  window.toggleEdit = function(id) {
+    document.getElementById('edit-'+id).classList.toggle('show');
+  }
+  window.saveEdit = async function(id) {
+    const text = document.getElementById('editInput-'+id).value.trim();
+    if (!text) return;
+    await updateDoc(doc(db,'questions',id),{text});
+    document.getElementById('edit-'+id).classList.remove('show');
+  }
+  window.deleteQ = async function(id) {
+    if (!confirm('이 질문을 삭제할까요?')) return;
+    await deleteDoc(doc(db,'questions',id));
+  }
+
+  // ── 라이트박스 ──
+  window.openLightbox = function(src) {
+    document.getElementById('lightboxImg').src=src;
+    document.getElementById('lightbox').classList.add('show');
+  }
+
+  // ── 관리자 ──
+  async function loadAdmin() {
+    const uSnap = await getDocs(collection(db,'users'));
+    const qSnap = await getDocs(collection(db,'questions'));
+    let totalAnswers=0;
+    qSnap.docs.forEach(d=>{ totalAnswers+=(d.data().answers||[]).length; });
+    document.getElementById('statUsers').textContent=uSnap.size;
+    document.getElementById('statQuestions').textContent=qSnap.size;
+    document.getElementById('statAnswers').textContent=totalAnswers;
+    document.getElementById('userList').innerHTML=uSnap.docs
+      .filter(d=>d.id!==ADMIN_ID)
+      .map(d=>`<div class="user-row">
+        <span class="user-nick">${d.data().nick}</span>
+        <span class="user-id">@${d.id}</span>
+        <span class="user-coin">${d.data().coins}C</span>
+        <button class="admin-del-btn" onclick="adminDelUser('${d.id}')">삭제</button>
+      </div>`).join('');
+  }
+  window.adminDelUser = async function(id) {
+    if (!confirm(`${id} 계정을 삭제할까요?`)) return;
+    await deleteDoc(doc(db,'users',id));
+    loadAdmin();
+  }
+
+  // ── 상점 ──
+  function renderShop() {
+    const owned=currentUser.owned||[];
+    const eq=currentUser.equipped||{};
+    const clothColor=CLOTHS.find(c=>c.id===(eq.cloth||'blue'))?.color||'#a0c4e8';
+    document.getElementById('charShop').innerHTML=CHARS.map(c=>`
+      <div class="shop-item ${owned.includes(c.id)?'owned':''} ${eq.char===c.id?'equipped':''}" onclick="buyEquipItem('char','${c.id}',${c.cost})">
+        <svg width="40" height="56" viewBox="0 0 10 14" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">${buildCharSVG(c.id,clothColor)}</svg>
+        <div class="shop-item-name">${c.name}</div>
+        <div class="shop-item-cost">${owned.includes(c.id)?(eq.char===c.id?'장착중':'장착'):`${c.cost}C`}</div>
+      </div>`).join('');
+    document.getElementById('bgShop').innerHTML=BGS.map(b=>{
+      const tmp=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      tmp.setAttribute('width','60'); tmp.setAttribute('height','40'); tmp.setAttribute('viewBox','0 0 180 130'); tmp.style.imageRendering='pixelated';
+      drawBg(tmp,b.id);
+      return `<div class="shop-item ${owned.includes(b.id)?'owned':''} ${eq.bg===b.id?'equipped':''}" onclick="buyEquipItem('bg','${b.id}',${b.cost})">
+        ${tmp.outerHTML}
+        <div class="shop-item-name">${b.name}</div>
+        <div class="shop-item-cost">${owned.includes(b.id)?(eq.bg===b.id?'장착중':'장착'):`${b.cost}C`}</div>
+      </div>`;
+    }).join('');
+    document.getElementById('clothShop').innerHTML=CLOTHS.map(cl=>`
+      <div class="shop-item ${owned.includes(cl.id)?'owned':''} ${eq.cloth===cl.id?'equipped':''}" onclick="buyEquipItem('cloth','${cl.id}',${cl.cost})">
+        <svg width="30" height="20" viewBox="0 0 6 4" style="image-rendering:pixelated">
+          <rect x="0" y="0" width="1" height="3" fill="${cl.color}"/>
+          <rect x="1" y="0" width="4" height="4" fill="${cl.color}"/>
+          <rect x="5" y="0" width="1" height="3" fill="${cl.color}"/>
+        </svg>
+        <div class="shop-item-name">${cl.name}</div>
+        <div class="shop-item-cost">${owned.includes(cl.id)?(eq.cloth===cl.id?'장착중':'장착'):`${cl.cost}C`}</div>
+      </div>`).join('');
+  }
+
+  window.buyEquipItem = async function(type, id, cost) {
+    const owned=currentUser.owned||[];
+    if (!owned.includes(id)) {
+      if (currentUser.coins<cost) { alert(`코인이 부족해요! ${cost}코인 필요`); return; }
+      currentUser.coins-=cost;
+      currentUser.owned=[...owned,id];
+    }
+    currentUser.equipped={...(currentUser.equipped||{}),[type]:id};
+    await updateDoc(doc(db,'users',currentUser.id),{ coins:currentUser.coins, owned:currentUser.owned, equipped:currentUser.equipped });
+    document.getElementById('coinCount').textContent=currentUser.coins;
+    applyEquipped();
+    renderShop();
+  }
+
+  // ── 테마 ──
+  window.toggleTheme = function() {
+    const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+    document.documentElement.setAttribute('data-theme',isDark?'light':'dark');
+    document.getElementById('themeBtn').textContent=isDark?'다크모드':'라이트모드';
+  }
+
+  // ── 시간 ──
+  function timeAgo(date) {
+    const d=Math.floor((new Date()-date)/1000);
+    if(d<60) return '방금';
+    if(d<3600) return Math.floor(d/60)+'분 전';
+    if(d<86400) return Math.floor(d/3600)+'시간 전';
+    return Math.floor(d/86400)+'일 전';
+  }
+
+  // ── 피드 (실시간, 모든 유저 공유) ──
+  const q = query(collection(db,'questions'),orderBy('createdAt','desc'));
+  onSnapshot(q, snap => {
+    if (!currentUser) return;
+    const feed = document.getElementById('feed');
+    if (snap.empty) {
+      feed.innerHTML='<div class="feed-empty">아직 질문이 없어요<br>첫 번째로 질문해봐요!</div>';
+      return;
+    }
+    const isAdmin = currentUser.id===ADMIN_ID;
+    feed.innerHTML=snap.docs.map(ds=>{
+      const d=ds.data(), id=ds.id;
+      const isOwner=d.authorId===currentUser.id;
+      const canEdit=isOwner||isAdmin;
+      const canDelete=isOwner||isAdmin;
+      const tags=(d.tags||[]).map(t=>`<span class="badge badge-tag">#${t}</span>`).join('');
+      const reactions=d.reactions||{};
+      const reactStr=encodeURIComponent(JSON.stringify(reactions));
+      const reactBtns=REACTIONS.map(r=>{
+        const arr=reactions[r.key]||[];
+        const on=arr.includes(currentUser.id);
+        return `<button class="react-btn ${on?'on':''}" onclick="toggleReaction('${id}','${r.key}','${reactStr}')">${r.label}${arr.length>0?' '+arr.length:''}</button>`;
+      }).join('');
+      const imgs=(d.imgs||[]).map(src=>`<img class="q-img" src="${src}" onclick="openLightbox('${src}')">`).join('');
+      const answers=(d.answers||[]).map(a=>`<div class="answer-item">
+        <svg class="answer-dot" width="8" height="8" viewBox="0 0 4 4" style="image-rendering:pixelated">
+          <rect x="1" y="0" width="2" height="1" fill="var(--accent)"/>
+          <rect x="0" y="1" width="4" height="2" fill="var(--accent)"/>
+          <rect x="1" y="3" width="2" height="1" fill="var(--accent)"/>
+        </svg>${a}</div>`).join('');
+      return `<div class="q-card">
+        <div class="q-tags"><span class="badge badge-level">${d.level}</span>${tags}</div>
+        ${imgs?`<div class="q-imgs">${imgs}</div>`:''}
+        ${d.text?`<div class="q-text">${d.text}</div>`:`<div class="q-text empty">(텍스트 없이 올라온 질문이에요)</div>`}
+        <div class="q-bottom">
+          ${reactBtns}
+          <span class="q-time">${timeAgo(d.createdAt?.toDate())}</span>
+          ${canEdit||canDelete?`<div class="q-actions">
+            ${canEdit?`<button class="edit-btn" onclick="toggleEdit('${id}')">수정</button>`:''}
+            ${canDelete?`<button class="del-btn" onclick="deleteQ('${id}')">삭제</button>`:''}
+          </div>`:''}
+        </div>
+        ${canEdit?`<div class="edit-area" id="edit-${id}">
+          <textarea class="edit-input" id="editInput-${id}">${d.text||''}</textarea>
+          <div class="btn-row">
+            <button class="ghost-btn" onclick="toggleEdit('${id}')">취소</button>
+            <button class="primary-btn" onclick="saveEdit('${id}')">저장</button>
+          </div>
+        </div>`:''}
+        <div class="answers">
+          ${answers}
+          <div class="answer-row">
+            <input class="answer-input" id="ans-${id}" placeholder="답변 달기... (+15코인)" onkeydown="if(event.key==='Enter')submitAnswer('${id}')">
+            <button class="answer-submit" onclick="submitAnswer('${id}')">전송</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  });
+</script>
+</body>
+</html>
